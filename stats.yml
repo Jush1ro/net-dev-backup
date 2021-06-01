@@ -1,0 +1,40 @@
+---
+
+- name: Backup mac cisco
+  hosts: cisco
+  gather_facts: false
+  connection: network_cli
+  vars_files:
+    cisco_credentials.yml
+    
+  tasks:
+
+          - set_fact: time="{{lookup('pipe','date \"+%Y-%m-%d-%H-%M\"')}}"
+
+          - name: sh command
+            ios_command:
+              commands:
+                - terminal datadump
+                - sh mac address-table
+            register: config
+
+          - name: save
+            copy:
+              content="\n ===show run=== \n {{ config.stdout }}"
+              dest="~/net-dev-backup/stats/cisco/{{ time }}_mac_{{ inventory_hostname }}"
+              
+          - name: formating
+            shell: sed 's/\\n/\n/g' ~/net-dev-backup/stats/cisco/{{ time }}_mac_{{ inventory_hostname }} > ~/net-dev-backup/stats/cisco/{{ time }}_format_mac_{{ inventory_hostname }}
+
+          - name: find older 14 days
+            find:
+              paths: "~/net-dev-backup/stats/cisco/"
+              age: 14d
+              recurse: yes
+            register: old14
+      
+          - name: remove older 14 days
+            file:
+              path: "{{ item.path }}" 
+              state: absent
+            with_items: "{{ old14.files }}"

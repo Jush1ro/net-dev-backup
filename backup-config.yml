@@ -1,0 +1,64 @@
+---
+
+- name: Backup conf cisco
+  hosts: cisco
+  gather_facts: false
+  connection: network_cli
+  vars_files:
+    cisco_credentials.yml
+
+  tasks:
+
+          - set_fact: time="{{lookup('pipe','date \"+%Y-%m-%d-%H-%M\"')}}"
+
+          - name: sh run
+            ios_command:
+              commands:
+                - terminal datadump
+                - sh run
+            register: config
+
+          - name: save
+            copy:
+              content="\n ===show run=== \n {{ config.stdout }}"
+              dest="~/net-dev-backup/backups/cisco/{{ time }}_cfg_{{ inventory_hostname }}"
+
+          - name: formating
+            shell: sed 's/\\n/\n/g' ~/net-dev-backup/backups/cisco/{{ time }}_cfg_{{ inventory_hostname }} > ~/net-dev-backup/backups/cisco/{{ time }}_format_cfg_{{ inventory_hostname }}
+
+          - name: find older 54 days
+            find:
+              paths: "~/net-dev-backup/backups/cisco/"
+              age: 54d
+              recurse: yes
+            register: old54
+
+          - name: remove older 54 days
+            file:
+              path: "{{ item.path }}"
+              state: absent
+            with_items: "{{ old54.files }}"
+
+
+- name: Backup conf mikrotik
+  hosts: mikrotik
+  gather_facts: false
+  connection: network_cli
+  vars_files:
+    mikrotik_credentials.yml
+  
+  tasks:    
+
+          - name: backup-file create
+            routeros_command:
+              commands: "/system backup save dont-encrypt=yes name=backup_apmik"
+
+          - name: backup-file download
+            net_get:
+              src: backup_apmik.backup
+              dest: "~/net-dev-backup/backups/mikrotik/{{ time }}_cfg_{{ inventory_hostname }}"
+              protocol: sftp
+              
+          - name: backup-file delete
+            routeros_command:
+              commands: "/file remove backup_apmik.backup"
