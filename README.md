@@ -17,7 +17,8 @@ Backups:
      
      
      CRON:
-     
+     ```
      0 */5 * * *    if ! out=`ansible-playbook -i ПУТЬ/net-dev-backup/hosts.yml -l хосты ПУТЬ/net-dev-backup/stats.yml --vault-password-file=ПУТЬ/net-dev-backup/.ansible_vault_pass`; then echo $out; fi
      
      0 */5 * * *    if ! out=`ansible-playbook -i ПУТЬ/net-dev-backup/hosts.yml -l хосты ПУТЬ/net-dev-backup/backup.yml --vault-password-file=ПУТЬ/net-dev-backup/.ansible_vault_pass`; then echo $out; fi
+     ```
